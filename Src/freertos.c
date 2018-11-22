@@ -57,6 +57,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */     
 #include "stm32f1xx_hal.h"
+#include "usart.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -82,42 +84,57 @@
 /* USER CODE BEGIN Variables */
 
 // Segment GPIOs
-#define SEG1A	(1 << 6)
-#define SEG1B	(1 << 5)
-#define SEG1C	(1 << 4)
-#define SEG1D	(1 << 0)
-#define SEG1E	(1 << 12)
-#define SEG1F	(1 << 1)
-#define SEG1G	(1 << 3)
+#define SEG1A	(1 << 3)
+#define SEG1B	(1 << 4)
+#define SEG1C	(1 << 5)
+#define SEG1D	(1 << 6)
+#define SEG1E	(1 << 7)
+#define SEG1F	(1 << 8)
+#define SEG1G	(1 << 9)
 
 // Character Definitions, constructed from Segments
-#define DIGIT_0		SEG1A | SEG1B | SEG1C | SEG1D | SEG1E | SEG1F
-#define DIGIT_1		SEG1B | SEG1C
-#define DIGIT_2		SEG1A | SEG1B | SEG1D | SEG1E | SEG1G
-#define DIGIT_3		SEG1A | SEG1B | SEG1C | SEG1D | SEG1G
-#define DIGIT_4		SEG1B | SEG1C | SEG1F | SEG1G
-#define DIGIT_5		SEG1A | SEG1C | SEG1D | SEG1F | SEG1G
-#define DIGIT_6		SEG1A | SEG1C | SEG1D | SEG1E | SEG1F | SEG1G
-#define DIGIT_7		SEG1A | SEG1B | SEG1C
-#define DIGIT_8		SEG1A | SEG1B | SEG1C | SEG1D | SEG1E | SEG1F | SEG1G
-#define DIGIT_9		SEG1A | SEG1B | SEG1C | SEG1D | SEG1F | SEG1G
+#define DIGIT1_0		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1E | SEG1F )
+#define DIGIT1_1		( SEG1B | SEG1C )
+#define DIGIT1_2		( SEG1A | SEG1B | SEG1D | SEG1E | SEG1G )
+#define DIGIT1_3		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1G )
+#define DIGIT1_4		( SEG1B | SEG1C | SEG1F | SEG1G )
+#define DIGIT1_5		( SEG1A | SEG1C | SEG1D | SEG1F | SEG1G )
+#define DIGIT1_6		( SEG1A | SEG1C | SEG1D | SEG1E | SEG1F | SEG1G )
+#define DIGIT1_7		( SEG1A | SEG1B | SEG1C )
+#define DIGIT1_8		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1E | SEG1F | SEG1G )
+#define DIGIT1_9		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1F | SEG1G )
+
+// All the GPIO Pins of Segment 1
+#define SEG1	DIGIT1_8
+
+#define NUM_SEGMENTS	7
+uint16_t SEGMENT_CODES[NUM_SEGMENTS] = {
+		SEG1A,
+		SEG1B,
+		SEG1C,
+		SEG1D,
+		SEG1E,
+		SEG1F,
+		SEG1G,
+};
 
 #define NUM_DIGITS 10
-uint16_t SEGMENT_CODES[NUM_DIGITS] = {
-		DIGIT_0,
-		DIGIT_1,
-		DIGIT_2,
-		DIGIT_3,
-		DIGIT_4,
-		DIGIT_5,
-		DIGIT_6,
-		DIGIT_7,
-		DIGIT_8,
-		DIGIT_9,
+uint16_t DIGIT_CODES[NUM_DIGITS] = {
+		DIGIT1_0,
+		DIGIT1_1,
+		DIGIT1_2,
+		DIGIT1_3,
+		DIGIT1_4,
+		DIGIT1_5,
+		DIGIT1_6,
+		DIGIT1_7,
+		DIGIT1_8,
+		DIGIT1_9,
 };
 
 /* USER CODE END Variables */
 osThreadId segmentCyclerHandle;
+osThreadId uartSenderHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -128,6 +145,7 @@ inline uint16_t segment2(uint16_t segment);
 /* USER CODE END FunctionPrototypes */
 
 void TaskSegmentCycler(void const * argument);
+void TaskUartSender(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -155,8 +173,12 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of segmentCycler */
-  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 128);
+  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 64);
   segmentCyclerHandle = osThreadCreate(osThread(segmentCycler), NULL);
+
+  /* definition and creation of uartSender */
+  osThreadDef(uartSender, TaskUartSender, osPriorityIdle, 0, 64);
+  uartSenderHandle = osThreadCreate(osThread(uartSender), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -179,34 +201,81 @@ void TaskSegmentCycler(void const * argument)
 
   /* USER CODE BEGIN TaskSegmentCycler */
 
-	uint8_t segmentIndex = 0;
+	uint8_t index = 0;
+	uint8_t increasing = 1;
 	uint16_t segment = 0;
+
+	char buf[32] = {0};
 
   /* Infinite loop */
   for(;;)
   {
-  	segment = SEGMENT_CODES[segmentIndex++];
-  	if (segmentIndex >= NUM_DIGITS)
-  		segmentIndex = 0;
+  	segment = SEGMENT_CODES[index];
+  	if (increasing) {
+  		index ++;
+
+			if (index >= NUM_SEGMENTS) {
+				index = NUM_SEGMENTS-2;
+				increasing = 0;
+			}
+  	}
+  	else {
+  		index --;
+			if (index <= 0) {
+				index = 0;
+				increasing = 1;
+			}
+  	}
 
   	// Turn all the Segment GPIO's off, then turn the relevant ones on
-  	HAL_GPIO_WritePin(SEGMENTS_PORT, 0xFFFF, GPIO_PIN_RESET);
+  	HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(SEGMENTS_PORT, segment, GPIO_PIN_SET);
 
-    osDelay(1000 / portTICK_PERIOD_MS);
+  	// TODO Invoke separate handler task to do this
+  	sprintf(buf, "Index: %d\r\n", index);
+  	HAL_UART_Transmit(&huart1, buf, strlen(buf), 100);
+
+    osDelay(100 / portTICK_PERIOD_MS);
   }
   /* USER CODE END TaskSegmentCycler */
+}
+
+/* USER CODE BEGIN Header_TaskUartSender */
+/**
+* @brief Function implementing the uartSender thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_TaskUartSender */
+void TaskUartSender(void const * argument)
+{
+  /* USER CODE BEGIN TaskUartSender */
+
+	// First thing to do is suspend this task. We don't really need to do anything
+	// unless manually woken up.
+	vTaskSuspend(uartSenderHandle);
+
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END TaskUartSender */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
+// TODO FIXME
 inline uint16_t segment1(uint16_t segment) {
-	return 0x007F & segment;
+	return segment;
+	//return 0x007F & segment;
 }
 
+// TODO FIXME
 inline uint16_t segment2(uint16_t segment) {
-	return 0x3F80 & (segment << 7);
+	return segment;
+	//return 0x3F80 & (segment << 7);
 }
      
 /* USER CODE END Application */
