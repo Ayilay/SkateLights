@@ -37,10 +37,11 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "gpio.h"
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_usart1_tx;
 
 extern TIM_HandleTypeDef htim1;
 
@@ -68,6 +69,9 @@ void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
 
+	// Turn the Green LED off and the RED LED on
+	GPIO_SetStatusLED_ERR();
+
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
@@ -85,6 +89,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+	GPIO_SetStatusLED_ERR();
 
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
@@ -103,6 +108,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
+	GPIO_SetStatusLED_ERR();
 
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
@@ -121,6 +127,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+	GPIO_SetStatusLED_ERR();
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -166,6 +173,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+* @brief This function handles DMA1 channel4 global interrupt.
+*/
+void DMA1_Channel4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 1 */
+}
 
 /**
 * @brief This function handles TIM1 update interrupt.

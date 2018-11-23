@@ -58,6 +58,7 @@
 /* USER CODE BEGIN Includes */     
 #include "stm32f1xx_hal.h"
 #include "usart.h"
+#include "gpio.h"
 #include "string.h"
 
 // Custom printf implementations for embedded applications from GitHub:
@@ -136,6 +137,8 @@ uint16_t DIGIT_CODES[NUM_DIGITS] = {
 		DIGIT1_9,
 };
 
+osPoolId uartStrMemPoolHandle;
+
 /* USER CODE END Variables */
 osThreadId segmentCyclerHandle;
 osThreadId uartSenderHandle;
@@ -146,6 +149,8 @@ osMessageQId UartSendQueueHandle;
 
 inline uint16_t segment1(uint16_t segment);
 inline uint16_t segment2(uint16_t segment);
+
+char* HALStatusToStr(HAL_StatusTypeDef status);
    
 /* USER CODE END FunctionPrototypes */
 
@@ -161,6 +166,8 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+	osPoolDef(uartStrMemPool, 5, uint8_t[64]);
+	uartStrMemPoolHandle = osPoolCreate(osPool(uartStrMemPool));
        
   /* USER CODE END Init */
 
@@ -216,8 +223,9 @@ void TaskSegmentCycler(void const * argument)
 	uint8_t increasing = 1;
 	uint16_t segment = 0;
 	TickType_t prevWakeTime;
+	osStatus status;
 
-	char buf[32] = {0};
+	char* buf = NULL;
 	prevWakeTime = osKernelSysTick();
 
   /* Infinite loop */
@@ -244,9 +252,17 @@ void TaskSegmentCycler(void const * argument)
   	HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(SEGMENTS_PORT, segment, GPIO_PIN_SET);
 
-  	// Use the UART-Printer Task to print the string
+  	// Allocate a chunk of memory on the uartStrings pool, place our string there,
+  	// and add the pointer to our string to the uartSendQueue to be printed by the
+  	// uartSender task
+  	buf = osPoolAlloc(uartStrMemPoolHandle);
   	sprintf(buf, "Index: %d\r\n", index);
-  	osMessagePut(UartSendQueueHandle, buf, 10);
+  	status = osMessagePut(UartSendQueueHandle, buf, 10);
+
+  	if (status != osOK) {
+			GPIO_SetStatusLED_ERR();
+			osThreadSuspendAll();
+  	}
 
     osDelayUntil(&prevWakeTime, 70);
   }
@@ -264,6 +280,7 @@ void TaskUartSender(void const * argument)
 {
   /* USER CODE BEGIN TaskUartSender */
 
+	HAL_StatusTypeDef status;
 	char* strToPrint;
 
   /* Infinite loop */
@@ -272,13 +289,50 @@ void TaskUartSender(void const * argument)
   	// Wait indefinitely for someone to put a message on the UartSendQueue
   	// As soon as something is put on the queue, wake up and print the string over UART
   	strToPrint = osMessageGet(UartSendQueueHandle, osWaitForever).value.p;
-		HAL_UART_Transmit(&huart1, strToPrint, strlen(strToPrint), 20);
+		//status = HAL_UART_Transmit_DMA(&huart1, strToPrint, strlen(strToPrint));
+		status = HAL_UART_Transmit(&huart1, strToPrint, strlen(strToPrint), 10);
+
+		// Indicate if something went wrong (primitive error checking)
+		if (status != HAL_OK) {
+			GPIO_SetStatusLED_ERR();
+		}
+		else {
+			GPIO_SetStatusLED_OK();
+		}
+
+		// Wait until we're done sending, and keep yielding to lower-priority tasks while waiting
+		while (huart1.gState != HAL_UART_STATE_READY) {
+			osThreadYield();
+		}
+
+		// The string to print was allocated on a memory pool, so free it
+		osPoolFree(uartStrMemPoolHandle, strToPrint);
+
   }
   /* USER CODE END TaskUartSender */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+
+char* HALStatusToStr(HAL_StatusTypeDef status) {
+  switch (status) {
+    case HAL_OK:
+      return "HAL_OK";
+      break;
+    case HAL_TIMEOUT:
+      return "HAL_TIMEOUT";
+      break;
+    case HAL_ERROR:
+      return "HAL_ERROR";
+      break;
+    case HAL_BUSY:
+      return "HAL_BUSY";
+      break;
+    default:
+      return "BAD_STAT";
+  }
+}
 
 // TODO FIXME
 inline uint16_t segment1(uint16_t segment) {
