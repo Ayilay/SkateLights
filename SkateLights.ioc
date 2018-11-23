@@ -1,10 +1,22 @@
 #MicroXplorer Configuration settings - do not modify
 FREERTOS.FootprintOK=true
 FREERTOS.HEAP_NUMBER=3
-FREERTOS.INCLUDE_vTaskDelayUntil=0
-FREERTOS.IPParameters=Tasks01,configENABLE_BACKWARD_COMPATIBILITY,HEAP_NUMBER,configMINIMAL_STACK_SIZE,FootprintOK,INCLUDE_vTaskDelayUntil
-FREERTOS.Tasks01=segmentCycler,0,64,TaskSegmentCycler,Default,NULL,Dynamic,NULL,NULL;uartSender,-3,64,TaskUartSender,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.INCLUDE_eTaskGetState=1
+FREERTOS.INCLUDE_pcTaskGetTaskName=1
+FREERTOS.INCLUDE_vTaskCleanUpResources=1
+FREERTOS.INCLUDE_vTaskDelayUntil=1
+FREERTOS.INCLUDE_xQueueGetMutexHolder=1
+FREERTOS.INCLUDE_xSemaphoreGetMutexHolder=1
+FREERTOS.INCLUDE_xTaskAbortDelay=1
+FREERTOS.INCLUDE_xTaskGetCurrentTaskHandle=1
+FREERTOS.INCLUDE_xTaskGetHandle=1
+FREERTOS.IPParameters=Tasks01,configENABLE_BACKWARD_COMPATIBILITY,HEAP_NUMBER,configMINIMAL_STACK_SIZE,FootprintOK,INCLUDE_vTaskDelayUntil,INCLUDE_xSemaphoreGetMutexHolder,INCLUDE_xQueueGetMutexHolder,INCLUDE_xTaskGetCurrentTaskHandle,INCLUDE_eTaskGetState,INCLUDE_xTaskAbortDelay,INCLUDE_xTaskGetHandle,INCLUDE_pcTaskGetTaskName,configIDLE_SHOULD_YIELD,configGENERATE_RUN_TIME_STATS,configCHECK_FOR_STACK_OVERFLOW,INCLUDE_vTaskCleanUpResources,Queues01
+FREERTOS.Queues01=UartSendQueue,4,uint32_t,0,Dynamic,NULL,NULL
+FREERTOS.Tasks01=segmentCycler,0,256,TaskSegmentCycler,Default,NULL,Dynamic,NULL,NULL;uartSender,2,128,TaskUartSender,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.configCHECK_FOR_STACK_OVERFLOW=0
 FREERTOS.configENABLE_BACKWARD_COMPATIBILITY=0
+FREERTOS.configGENERATE_RUN_TIME_STATS=0
+FREERTOS.configIDLE_SHOULD_YIELD=0
 FREERTOS.configMINIMAL_STACK_SIZE=64
 File.Version=6
 KeepUserPlacement=true

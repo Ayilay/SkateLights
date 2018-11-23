@@ -59,6 +59,10 @@
 #include "stm32f1xx_hal.h"
 #include "usart.h"
 #include "string.h"
+
+// Custom printf implementations for embedded applications from GitHub:
+// https://github.com/mpaland/printf
+#include "printf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -135,6 +139,7 @@ uint16_t DIGIT_CODES[NUM_DIGITS] = {
 /* USER CODE END Variables */
 osThreadId segmentCyclerHandle;
 osThreadId uartSenderHandle;
+osMessageQId UartSendQueueHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -173,16 +178,22 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of segmentCycler */
-  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 64);
+  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 256);
   segmentCyclerHandle = osThreadCreate(osThread(segmentCycler), NULL);
 
   /* definition and creation of uartSender */
-  osThreadDef(uartSender, TaskUartSender, osPriorityIdle, 0, 64);
+  osThreadDef(uartSender, TaskUartSender, osPriorityHigh, 0, 128);
   uartSenderHandle = osThreadCreate(osThread(uartSender), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
+
+  /* Create the queue(s) */
+  /* definition and creation of UartSendQueue */
+/* what about the sizeof here??? cd native code */
+  osMessageQDef(UartSendQueue, 4, uint32_t);
+  UartSendQueueHandle = osMessageCreate(osMessageQ(UartSendQueue), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -204,8 +215,10 @@ void TaskSegmentCycler(void const * argument)
 	uint8_t index = 0;
 	uint8_t increasing = 1;
 	uint16_t segment = 0;
+	TickType_t prevWakeTime;
 
 	char buf[32] = {0};
+	prevWakeTime = osKernelSysTick();
 
   /* Infinite loop */
   for(;;)
@@ -231,11 +244,11 @@ void TaskSegmentCycler(void const * argument)
   	HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(SEGMENTS_PORT, segment, GPIO_PIN_SET);
 
-  	// TODO Invoke separate handler task to do this
+  	// Use the UART-Printer Task to print the string
   	sprintf(buf, "Index: %d\r\n", index);
-  	HAL_UART_Transmit(&huart1, buf, strlen(buf), 100);
+  	osMessagePut(UartSendQueueHandle, buf, 10);
 
-    osDelay(100 / portTICK_PERIOD_MS);
+    osDelayUntil(&prevWakeTime, 70);
   }
   /* USER CODE END TaskSegmentCycler */
 }
@@ -251,14 +264,15 @@ void TaskUartSender(void const * argument)
 {
   /* USER CODE BEGIN TaskUartSender */
 
-	// First thing to do is suspend this task. We don't really need to do anything
-	// unless manually woken up.
-	vTaskSuspend(uartSenderHandle);
+	char* strToPrint;
 
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+  	// Wait indefinitely for someone to put a message on the UartSendQueue
+  	// As soon as something is put on the queue, wake up and print the string over UART
+  	strToPrint = osMessageGet(UartSendQueueHandle, osWaitForever).value.p;
+		HAL_UART_Transmit(&huart1, strToPrint, strlen(strToPrint), 20);
   }
   /* USER CODE END TaskUartSender */
 }
