@@ -198,7 +198,6 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* definition and creation of UartSendQueue */
-/* what about the sizeof here??? cd native code */
   osMessageQDef(UartSendQueue, 4, uint32_t);
   UartSendQueueHandle = osMessageCreate(osMessageQ(UartSendQueue), NULL);
 
