@@ -288,8 +288,8 @@ void TaskUartSender(void const * argument)
   	// Wait indefinitely for someone to put a message on the UartSendQueue
   	// As soon as something is put on the queue, wake up and print the string over UART
   	strToPrint = osMessageGet(UartSendQueueHandle, osWaitForever).value.p;
-		//status = HAL_UART_Transmit_DMA(&huart1, strToPrint, strlen(strToPrint));
-		status = HAL_UART_Transmit(&huart1, strToPrint, strlen(strToPrint), 10);
+		//status = HAL_UART_Transmit(&huart1, strToPrint, strlen(strToPrint), 10);
+		status = HAL_UART_Transmit_DMA(&huart1, strToPrint, strlen(strToPrint));
 
 		// Indicate if something went wrong (primitive error checking)
 		if (status != HAL_OK) {
