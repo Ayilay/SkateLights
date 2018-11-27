@@ -88,6 +88,9 @@ void TaskSegmentCycler(void const * argument)
 
 	prevWakeTime = osKernelSysTick();
 
+	// First thing this task does is go into low-power mode
+	dispResetTimerCallback(NULL);
+
   /* Infinite loop */
   for(;;)
   {
@@ -111,9 +114,6 @@ void TaskSegmentCycler(void const * argument)
   	// Turn all the Segment GPIO's off, then turn the relevant ones on
   	HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(SEGMENTS_PORT, segment, GPIO_PIN_SET);
-
-  	// Trigger the neopixel driver to write the pixels
-  	osThreadResume(neopixelDriverHandle);
 
     osDelayUntil(&prevWakeTime, 70);
   }

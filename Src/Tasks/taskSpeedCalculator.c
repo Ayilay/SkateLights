@@ -4,12 +4,15 @@
 #include "stm32f1xx_hal.h"
 
 #define SPEED_TIMER		htim2
-#define WHEEL_RADIUS 	10.8
-#define TIME_MULT			1000
+#define WHEEL_DIAM 		10.8
+#define TIME_MULT			1000.0F
+#define DIST_PER_REV	(3.141592F * WHEEL_DIAM)
+#define CM_S_TO_MPH		44.704
 
 void TaskSpeedCalculator(void const * argument) {
 	uint16_t deltaT = 0;
 	uint8_t* buf;
+	float speed;
 
 	// Enable the wheel speed counter
 	HAL_TIM_Base_Start(&SPEED_TIMER);
@@ -26,11 +29,11 @@ void TaskSpeedCalculator(void const * argument) {
 		if (deltaT == 0)
 			deltaT = 1;
 
-		//speed = (TIME_MULT / deltaT) * WHEEL_RADIUS;
+		speed = (TIME_MULT / deltaT) * DIST_PER_REV / CM_S_TO_MPH;
 
 		// Print the speed to the user for debug purposes
 		buf = osPoolAlloc(uartStrMemPoolHandle);
-		sprintf((char*) buf, "DeltaT: %d\r\n", deltaT);
+		sprintf((char*) buf, "Speed: %0.2f mph/s\r\n", speed);
 		osMessagePut(UartSendQueueHandle, (uint32_t) buf, 50);
 	}
 }
