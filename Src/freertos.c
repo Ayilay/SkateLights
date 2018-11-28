@@ -98,6 +98,7 @@ osThreadId speedCalculatorHandle;
 osMessageQId UartSendQueueHandle;
 osMessageQId wheelSpeedQueueHandle;
 osTimerId dispResetTimerHandle;
+osMutexId pixelPreBufferMutexHandle;
 osSemaphoreId neopixelRWMutexHandle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -118,18 +119,6 @@ extern void dispResetTimerCallback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
-/* Hook prototypes */
-void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char *pcTaskName);
-
-/* USER CODE BEGIN 4 */
-__weak void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char *pcTaskName)
-{
-   /* Run time stack overflow checking is performed if
-   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
-   called if a stack overflow is detected. */
-}
-/* USER CODE END 4 */
-
 /**
   * @brief  FreeRTOS initialization
   * @param  None
@@ -146,6 +135,11 @@ void MX_FREERTOS_Init(void) {
 	osPoolCAlloc(neopixelBufferPoolHandle);
        
   /* USER CODE END Init */
+
+  /* Create the mutex(es) */
+  /* definition and creation of pixelPreBufferMutex */
+  osMutexDef(pixelPreBufferMutex);
+  pixelPreBufferMutexHandle = osMutexCreate(osMutex(pixelPreBufferMutex));
 
   /* USER CODE BEGIN RTOS_MUTEX */
 
@@ -173,7 +167,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of segmentCycler */
-  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 192);
+  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 256);
   segmentCyclerHandle = osThreadCreate(osThread(segmentCycler), NULL);
 
   /* definition and creation of uartSender */

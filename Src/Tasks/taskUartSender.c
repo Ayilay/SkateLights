@@ -3,6 +3,7 @@
 #include "tasks.h"
 #include "usart.h"
 #include "gpio.h"
+#include "string.h"
 
 /* USER CODE BEGIN Header_TaskUartSender */
 /**

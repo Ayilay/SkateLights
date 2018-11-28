@@ -109,7 +109,6 @@
 #define configIDLE_SHOULD_YIELD                  0
 #define configUSE_MUTEXES                        1
 #define configQUEUE_REGISTRY_SIZE                8
-#define configCHECK_FOR_STACK_OVERFLOW           1
 #define configENABLE_BACKWARD_COMPATIBILITY      0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION  1
 
@@ -121,7 +120,7 @@
 #define configUSE_TIMERS                         1
 #define configTIMER_TASK_PRIORITY                ( 2 )
 #define configTIMER_QUEUE_LENGTH                 4
-#define configTIMER_TASK_STACK_DEPTH             128
+#define configTIMER_TASK_STACK_DEPTH             64
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */

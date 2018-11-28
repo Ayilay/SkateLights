@@ -40,6 +40,9 @@ void TaskNeopixelDriver(void const * argument)
   	// Suspend this thread asap. The neopixel driving happens
   	osThreadSuspend(neopixelDriverHandle);
 
+  	// Lock access to the pre-buffer so that we can construct the buffer
+  	osMutexWait(pixelPreBufferMutexHandle, osWaitForever);
+
   	// Initialize the pointer to the buffer
 		p = neopixelBuffer;
 
@@ -52,7 +55,7 @@ void TaskNeopixelDriver(void const * argument)
   		// Iterate through each color (ugly pointer magic because we can't use
   		// direct array indexing)
   		for (j = 0; j < 3; j++) {
-				c = *(((uint8_t *) &pixArrPtr[i])+j);
+  			c = *(((uint8_t *) &pixArrPtr[i])+j);
 
 				temp  = convBitToSerial(c & 0x80) << 5;
 				temp |= convBitToSerial(c & 0x40) << 2;
@@ -74,6 +77,9 @@ void TaskNeopixelDriver(void const * argument)
 
   	// Add the trailing zero to the buffer
   	*p = 0;
+
+  	// Done constructing the buffer, release the prebuffer mutex
+  	osMutexRelease(pixelPreBufferMutexHandle);
 
   	// Prepare to transmit the buffer over SPI (wait until all SPI transactions finish)
   	while (hspi1.State != HAL_SPI_STATE_READY) {

@@ -75,17 +75,6 @@ void TaskSegmentCycler(void const * argument)
 
 	//osStatus status;
 	//char* buf = NULL;
-
-	// TODO This is for testing purposes only, remove asap
-	// Write to the neopixel buffer and trigger a write sequence
-	((NeopixelColor_t*) neopixelBufferPoolHandle)[0].G = 0xDE;
-	((NeopixelColor_t*) neopixelBufferPoolHandle)[0].R = 0xAD;
-	((NeopixelColor_t*) neopixelBufferPoolHandle)[0].B = 0xBE;
-
-	((NeopixelColor_t*) neopixelBufferPoolHandle)[NUM_NEOPIXELS-1].G = 0xDE;
-	((NeopixelColor_t*) neopixelBufferPoolHandle)[NUM_NEOPIXELS-1].R = 0xAD;
-	((NeopixelColor_t*) neopixelBufferPoolHandle)[NUM_NEOPIXELS-1].B = 0xBE;
-
 	prevWakeTime = osKernelSysTick();
 
 	// First thing this task does is go into low-power mode
@@ -128,4 +117,8 @@ void TaskSegmentCycler(void const * argument)
 void dispResetTimerCallback(void const * argument) {
 	osThreadSuspend(segmentCyclerHandle);
 	HAL_GPIO_WritePin(GPIOB, 0xFFFF & ~LED_ERR_Pin, GPIO_PIN_RESET);
+
+	char* str = osPoolAlloc(uartStrMemPoolHandle);
+	sprintf(str, "Entering Sleep Mode\r\n");
+	osMessagePut(UartSendQueueHandle, str, osWaitForever);
 }

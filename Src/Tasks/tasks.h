@@ -23,6 +23,7 @@ extern osMessageQId UartSendQueueHandle;
 extern osMessageQId wheelSpeedQueueHandle;
 extern osSemaphoreId neopixelRWMutexHandle;
 extern osTimerId dispResetTimerHandle;
+extern osMutexId pixelPreBufferMutexHandle;
 
 // Memory pool to store strings to be printed over serial
 extern osPoolId uartStrMemPoolHandle;
