@@ -95,6 +95,7 @@ void NMI_Handler(void)
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
+  HAL_RCC_NMI_IRQHandler();
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
 
   /* USER CODE END NonMaskableInt_IRQn 1 */
@@ -106,10 +107,13 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-
-	// Turn the Green LED off and the RED LED on
-	GPIO_SetStatusLED_ERR();
-
+//
+//	// Turn the Green LED off and the RED LED on
+GPIO_SetStatusLED_ERR();
+//	traceString chn;
+//	chn = xTraceRegisterString("WeFuckedUp");
+//	vTracePrint(chn, "HARD FAULT FUCK");
+//
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {

@@ -95,11 +95,12 @@ osThreadId segmentCyclerHandle;
 osThreadId uartSenderHandle;
 osThreadId neopixelDriverHandle;
 osThreadId speedCalculatorHandle;
+osThreadId neopixelDickeryHandle;
 osMessageQId UartSendQueueHandle;
 osMessageQId wheelSpeedQueueHandle;
 osTimerId dispResetTimerHandle;
 osMutexId pixelPreBufferMutexHandle;
-osSemaphoreId neopixelRWMutexHandle;
+osSemaphoreId neopixelDriverEnableHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -115,9 +116,27 @@ void TaskSegmentCycler(void const * argument);
 extern void TaskUartSender(void const * argument);
 extern void TaskNeopixelDriver(void const * argument);
 extern void TaskSpeedCalculator(void const * argument);
+extern void TaskNeopixelDickery(void const * argument);
 extern void dispResetTimerCallback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+
+/* Hook prototypes */
+void configureTimerForRunTimeStats(void);
+unsigned long getRunTimeCounterValue(void);
+
+/* USER CODE BEGIN 1 */
+/* Functions needed when configGENERATE_RUN_TIME_STATS is on */
+__weak void configureTimerForRunTimeStats(void)
+{
+
+}
+
+__weak unsigned long getRunTimeCounterValue(void)
+{
+return 0;
+}
+/* USER CODE END 1 */
 
 /**
   * @brief  FreeRTOS initialization
@@ -146,9 +165,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* definition and creation of neopixelRWMutex */
-  osSemaphoreDef(neopixelRWMutex);
-  neopixelRWMutexHandle = osSemaphoreCreate(osSemaphore(neopixelRWMutex), 1);
+  /* definition and creation of neopixelDriverEnable */
+  osSemaphoreDef(neopixelDriverEnable);
+  neopixelDriverEnableHandle = osSemaphoreCreate(osSemaphore(neopixelDriverEnable), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -182,6 +201,10 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(speedCalculator, TaskSpeedCalculator, osPriorityNormal, 0, 64);
   speedCalculatorHandle = osThreadCreate(osThread(speedCalculator), NULL);
 
+  /* definition and creation of neopixelDickery */
+  osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 160);
+  neopixelDickeryHandle = osThreadCreate(osThread(neopixelDickery), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -197,6 +220,15 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+
+  // Add custom names for the queues for Tracealyzer
+#if(configUSE_TRACE_FACILITY == 1)
+  vTraceSetQueueName(wheelSpeedQueueHandle, "Wheel Speed");
+  vTraceSetQueueName(UartSendQueueHandle, "UART");
+  vTraceSetSemaphoreName(neopixelDriverEnableHandle, "Neopixel Enable");
+  vTraceSetMutexName(pixelPreBufferMutexHandle, "Pixel Buffer");
+#endif
+
   /* USER CODE END RTOS_QUEUES */
 }
 

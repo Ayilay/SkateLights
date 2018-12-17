@@ -1,6 +1,7 @@
 #include "tasks.h"
 #include "cmsis_os.h"
 #include "tim.h"
+#include "printf.h"
 #include "stm32f1xx_hal.h"
 
 #define SPEED_TIMER		htim2
@@ -9,10 +10,18 @@
 #define DIST_PER_REV	(3.141592F * WHEEL_DIAM)
 #define CM_S_TO_MPH		44.704
 
+#if(configUSE_TRACE_FACILITY == 1)
+	traceHandle SpeedInterruptHandle;
+#endif
+
 void TaskSpeedCalculator(void const * argument) {
 	uint16_t deltaT = 0;
 	uint8_t* buf;
 	float speed;
+
+#if(configUSE_TRACE_FACILITY == 1)
+	SpeedInterruptHandle = xTraceSetISRProperties("SpeedInterruptHandle", 3);
+#endif
 
 	// Enable the wheel speed counter
 	HAL_TIM_Base_Start(&SPEED_TIMER);
@@ -22,18 +31,27 @@ void TaskSpeedCalculator(void const * argument) {
 		deltaT = (uint16_t) osMessageGet(wheelSpeedQueueHandle, osWaitForever).value.v;
 
 		// Resume this thread if it is suspended
-		osThreadResume(segmentCyclerHandle);
+		//osThreadResume(segmentCyclerHandle);
 		osTimerStart(dispResetTimerHandle, 5000);
-
-		// Ensure no divide-by-zero condition occurs
-		if (deltaT == 0)
-			deltaT = 1;
-
-		speed = (TIME_MULT / deltaT) * DIST_PER_REV / CM_S_TO_MPH;
 
 		// Print the speed to the user for debug purposes
 		buf = osPoolAlloc(uartStrMemPoolHandle);
-		sprintf((char*) buf, "Speed: %0.2f mph/s\r\n", speed);
+		if (deltaT == 0) {
+			sprintf((char*) buf, "TIM CNT == 0 FUCK\r\n");
+		}
+		else {
+			// SUPERMULT = 75.897444
+			#define SUPERMULT (TIME_MULT * DIST_PER_REV / CM_S_TO_MPH)
+			//speed = (TIME_MULT / deltaT) * DIST_PER_REV / CM_S_TO_MPH;
+			speed = SUPERMULT / deltaT;
+
+			if (speed > 20) {
+				sprintf((char*) buf, "Way too fast, deltaT of %d\r\n", deltaT);
+			}
+			else {
+				sprintf((char*) buf, "Speed: %0.2f mph/s\tDeltaT: %d\r\n", speed, deltaT);
+			}
+		}
 		osMessagePut(UartSendQueueHandle, (uint32_t) buf, 50);
 	}
 }
@@ -44,8 +62,14 @@ void TaskSpeedCalculator(void const * argument) {
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
+#if(configUSE_TRACE_FACILITY == 1)
+	vTraceStoreISRBegin(SpeedInterruptHandle);
+#endif
+
+  portBASE_TYPE taskWoken = pdFALSE;
+
 	// Record the current change in time since the last revolution
-	uint16_t deltaT = SPEED_TIMER.Instance->CNT;
+	volatile uint16_t deltaT = SPEED_TIMER.Instance->CNT;
 
 	// Reset the counter
 	__HAL_TIM_DISABLE(&SPEED_TIMER);
@@ -53,5 +77,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	__HAL_TIM_ENABLE(&SPEED_TIMER);
 
 	// Send the deltaT to the global speed queue to be parsed
-	osMessagePut(wheelSpeedQueueHandle, deltaT, 0);
+	if (deltaT != 0) {
+		//osMessagePut(wheelSpeedQueueHandle, deltaT, 0);
+    xQueueSendFromISR(wheelSpeedQueueHandle, deltaT, &taskWoken);
+	}
+
+#if(configUSE_TRACE_FACILITY == 1)
+	vTraceStoreISREnd(0);
+#endif
+	portEND_SWITCHING_ISR(taskWoken);
 }

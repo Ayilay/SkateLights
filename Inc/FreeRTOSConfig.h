@@ -86,12 +86,17 @@
 
 /* USER CODE BEGIN Includes */   	      
 /* Section where include file can be added */
+#include "gpio.h"
 /* USER CODE END Includes */ 
 
 /* Ensure stdint is only used by the compiler, and not the assembler. */
 #if defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__)
     #include <stdint.h>
     extern uint32_t SystemCoreClock;
+/* USER CODE BEGIN 0 */   	      
+    extern void configureTimerForRunTimeStats(void);
+    extern unsigned long getRunTimeCounterValue(void);  
+/* USER CODE END 0 */       
 #endif
 
 #define configUSE_PREEMPTION                     1
@@ -103,8 +108,9 @@
 #define configTICK_RATE_HZ                       ((TickType_t)1000)
 #define configMAX_PRIORITIES                     ( 7 )
 #define configMINIMAL_STACK_SIZE                 ((uint16_t)64)
-#define configTOTAL_HEAP_SIZE                    ((size_t)5096)
+#define configTOTAL_HEAP_SIZE                    ((size_t)6096)
 #define configMAX_TASK_NAME_LEN                  ( 16 )
+#define configGENERATE_RUN_TIME_STATS            1
 #define configUSE_16_BIT_TICKS                   0
 #define configIDLE_SHOULD_YIELD                  0
 #define configUSE_MUTEXES                        1
@@ -168,7 +174,7 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 /* Normal assert() semantics without relying on the provision of an assert.h
 header file. */
 /* USER CODE BEGIN 1 */
-#define configASSERT( x ) if ((x) == 0) {taskDISABLE_INTERRUPTS(); for( ;; );} 
+#define configASSERT( x ) if ((x) == 0) {GPIO_SetStatusLED_ERR(); taskDISABLE_INTERRUPTS(); for( ;; ){}}
 /* USER CODE END 1 */
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
@@ -180,8 +186,19 @@ standard names. */
               to prevent overwriting SysTick_Handler defined within STM32Cube HAL */
 #define xPortSysTickHandler SysTick_Handler
 
+/* USER CODE BEGIN 2 */    
+/* Definitions needed when configGENERATE_RUN_TIME_STATS is on */
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS configureTimerForRunTimeStats
+#define portGET_RUN_TIME_COUNTER_VALUE getRunTimeCounterValue    
+/* USER CODE END 2 */
+
 /* USER CODE BEGIN Defines */   	      
+/* Integrates the Tracealyzer recorder with FreeRTOS */
+#if ( configUSE_TRACE_FACILITY == 1 )
+#include "trcRecorder.h"
+#endif
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
+
 /* USER CODE END Defines */ 
 
 #endif /* FREERTOS_CONFIG_H */

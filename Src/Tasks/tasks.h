@@ -21,7 +21,7 @@ extern osThreadId uartSenderHandle;
 extern osThreadId neopixelDriverHandle;
 extern osMessageQId UartSendQueueHandle;
 extern osMessageQId wheelSpeedQueueHandle;
-extern osSemaphoreId neopixelRWMutexHandle;
+extern osSemaphoreId neopixelDriverEnableHandle;
 extern osTimerId dispResetTimerHandle;
 extern osMutexId pixelPreBufferMutexHandle;
 

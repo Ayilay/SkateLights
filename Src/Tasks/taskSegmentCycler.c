@@ -55,6 +55,13 @@ uint16_t DIGIT_CODES[NUM_DIGITS] = {
 		DIGIT1_9,
 };
 
+// Function Prototypes
+void randomizeNeopixels();
+
+#if(configUSE_TRACE_FACILITY == 1)
+traceString chn;
+#endif
+
 
 /* USER CODE BEGIN Header_TaskSegmentCycler */
 /**
@@ -72,6 +79,10 @@ void TaskSegmentCycler(void const * argument)
 	uint8_t increasing = 1;
 	uint16_t segment = 0;
 	TickType_t prevWakeTime;
+
+#if(configUSE_TRACE_FACILITY == 1)
+	chn = xTraceRegisterString("SegmentCyclerChannel");
+#endif
 
 	//osStatus status;
 	//char* buf = NULL;
@@ -104,7 +115,26 @@ void TaskSegmentCycler(void const * argument)
   	HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(SEGMENTS_PORT, segment, GPIO_PIN_SET);
 
-    osDelayUntil(&prevWakeTime, 70);
+  	// Create a random new string of neopixel colors
+  	//randomizeNeopixels();
+
+		// Signal to the neopixel driver task that we want it to update the neopixel colors
+		osStatus status = osSemaphoreRelease(neopixelDriverEnableHandle);
+
+#if(configUSE_TRACE_FACILITY == 1)
+		if (status != osOK) {
+			vTracePrint(chn, "Failed to release neopixelDriverEnable semaphore");
+		}
+		else {
+			vTracePrint(chn, "Semaphore neopixelDriverEnable given up");
+		}
+#endif
+
+  	// WARNING: When this task is suspended for long amounts of time and then resumed, then
+  	// osDelayUntil will exit immediately until the prevWakeTime "catches up" (extreme runtimes of
+  	// up to 500 ms have been observed)
+    //osDelayUntil(&prevWakeTime, 70);
+    osDelay(200);
   }
   /* USER CODE END TaskSegmentCycler */
 }
@@ -121,4 +151,37 @@ void dispResetTimerCallback(void const * argument) {
 	char* str = osPoolAlloc(uartStrMemPoolHandle);
 	sprintf(str, "Entering Sleep Mode\r\n");
 	osMessagePut(UartSendQueueHandle, str, osWaitForever);
+}
+
+/**
+ * Writes a surprise combination to the neopixel prebuffer
+ */
+void randomizeNeopixels() {
+	static int r = 0;
+	int g, b;
+
+	// Obtain the pixel pre-buffer mutex so that we can modify the prebuffer
+	osStatus status = osMutexWait(pixelPreBufferMutexHandle, 20);
+
+	if (status != osOK) {
+#if(configUSE_TRACE_FACILITY == 1)
+		vTracePrint(chn, "Failed to obtain preBufferMutex");
+#endif
+		return;
+	}
+
+	NeopixelColor_t* pixArrPtr = ((NeopixelArray_t *) neopixelBufferPoolHandle)->array;
+
+	r += 20 % 255;
+	g = (r + 20) % 255;
+	b = (r + 40) % 255;
+
+	for (int i = 0; i < NUM_NEOPIXELS; i++) {
+		pixArrPtr[i].R = r;
+		pixArrPtr[i].G = g;
+		pixArrPtr[i].B = b;
+	}
+
+	// Done creating the pre-buffer, release the mutex
+	osMutexRelease(pixelPreBufferMutexHandle);
 }
