@@ -119,7 +119,8 @@ void TaskSegmentCycler(void const * argument)
   	//randomizeNeopixels();
 
 		// Signal to the neopixel driver task that we want it to update the neopixel colors
-		osStatus status = osSemaphoreRelease(neopixelDriverEnableHandle);
+		osSemaphoreRelease(neopixelDriverEnableHandle);
+		//osStatus status = osSemaphoreRelease(neopixelDriverEnableHandle);
 
 #if(configUSE_TRACE_FACILITY == 1)
 		if (status != osOK) {
@@ -150,7 +151,7 @@ void dispResetTimerCallback(void const * argument) {
 
 	char* str = osPoolAlloc(uartStrMemPoolHandle);
 	sprintf(str, "Entering Sleep Mode\r\n");
-	osMessagePut(UartSendQueueHandle, str, osWaitForever);
+	osMessagePut(UartSendQueueHandle, (uint32_t) str, osWaitForever);
 }
 
 /**

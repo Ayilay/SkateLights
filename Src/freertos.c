@@ -198,11 +198,11 @@ void MX_FREERTOS_Init(void) {
   neopixelDriverHandle = osThreadCreate(osThread(neopixelDriver), NULL);
 
   /* definition and creation of speedCalculator */
-  osThreadDef(speedCalculator, TaskSpeedCalculator, osPriorityNormal, 0, 64);
+  osThreadDef(speedCalculator, TaskSpeedCalculator, osPriorityNormal, 0, 128);
   speedCalculatorHandle = osThreadCreate(osThread(speedCalculator), NULL);
 
   /* definition and creation of neopixelDickery */
-  osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 160);
+  osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 256);
   neopixelDickeryHandle = osThreadCreate(osThread(neopixelDickery), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */

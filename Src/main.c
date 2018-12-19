@@ -134,6 +134,9 @@ int main(void)
   HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_OK_Pin, GPIO_PIN_RESET);
 
+  const char* strBoot = "System reboot complete, peripheral init done\r\n";
+  HAL_UART_Transmit(&huart1, strBoot, strlen(strBoot), 10);
+
   // Enable the Tracealyzer analysis
 #if (configUSE_TRACE_FACILITY == 1)
   vTraceEnable(TRC_START);
