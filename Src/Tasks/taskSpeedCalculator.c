@@ -31,8 +31,8 @@ void TaskSpeedCalculator(void const * argument) {
 		deltaT = (uint16_t) osMessageGet(wheelSpeedQueueHandle, osWaitForever).value.v;
 
 		// Resume this thread if it is suspended
-		//osThreadResume(segmentCyclerHandle);
-		osTimerStart(dispResetTimerHandle, 5000);
+		osThreadResume(segmentCyclerHandle);
+		osTimerStart(dispResetTimerHandle, 15000);
 
 		// Print the speed to the user for debug purposes
 		buf = osPoolAlloc(uartStrMemPoolHandle);

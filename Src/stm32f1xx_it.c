@@ -48,7 +48,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
- 
+
+#define UART_RX_BUFSIZ  64
+#define UART_DELIM      '\n'
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,7 +62,21 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
-volatile uint16_t timer3Period = 58;
+uint8_t uartRxBuf1[UART_RX_BUFSIZ];
+uint8_t uartRxBuf2[UART_RX_BUFSIZ];
+
+uint8_t* currentBuf   = uartRxBuf1; // The buffer that's currently populating from UART
+uint8_t* bufToProcess = uartRxBuf1; // The buffer that's ready for application to process
+
+uint8_t uartRxCnt = 0;              // The amount of bytes we've received in the buffer
+uint8_t uartRxCntToProcess = 0;     // The amount of bytes that are ready to process
+
+// If we receive more data than we can store in a buffer, ignore
+// further data until idle line, then send warning to application
+uint8_t uartRxBufOvf = 0;
+
+// Once one of the buffers is ready for processing, this is set to 1
+uint8_t uartDataReady = 0;
 
 /* USER CODE END PV */
 
@@ -76,12 +93,12 @@ volatile uint16_t timer3Period = 58;
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_spi1_tx;
 extern SPI_HandleTypeDef hspi1;
+extern TIM_HandleTypeDef htim3;
 extern DMA_HandleTypeDef hdma_usart1_tx;
-extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN EV */
-
+extern UART_HandleTypeDef huart1;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -106,25 +123,11 @@ void NMI_Handler(void)
   */
 void HardFault_Handler(void)
 {
-	// ASM Magic to help debug wtf happened
-	// https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html
-	__asm volatile
-    (
-        " tst lr, #4                                                \n"
-        " ite eq                                                    \n"
-        " mrseq r0, msp                                             \n"
-        " mrsne r0, psp                                             \n"
-        " ldr r1, [r0, #24]                                         \n"
-        " ldr r2, handler2_address_const                            \n"
-        " bx r2                                                     \n"
-        " handler2_address_const: .word prvGetRegistersFromStack    \n"
-    );
-
   /* USER CODE BEGIN HardFault_IRQn 0 */
 	// Old stuff
 	//
 	//	// Turn the Green LED off and the RED LED on
-	//	GPIO_SetStatusLED_ERR();
+	GPIO_SetStatusLED_ERR();
 	//	traceString chn;
 	//	chn = xTraceRegisterString("WeFuckedUp");
 	//	vTracePrint(chn, "HARD FAULT FUCK");
@@ -135,38 +138,6 @@ void HardFault_Handler(void)
     /* USER CODE BEGIN W1_HardFault_IRQn 0 */
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
-}
-
-// To help diagnose the hard fault handler
-void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
-{
-/* These are volatile to try and prevent the compiler/linker optimising them
-away as the variables never actually get used.  If the debugger won't show the
-values of the variables, make them global my moving their declaration outside
-of this function. */
-volatile uint32_t r0;
-volatile uint32_t r1;
-volatile uint32_t r2;
-volatile uint32_t r3;
-volatile uint32_t r12;
-volatile uint32_t lr; /* Link register. */
-volatile uint32_t pc; /* Program counter. */
-volatile uint32_t psr;/* Program status register. */
-
-    r0 = pulFaultStackAddress[ 0 ];
-    r1 = pulFaultStackAddress[ 1 ];
-    r2 = pulFaultStackAddress[ 2 ];
-    r3 = pulFaultStackAddress[ 3 ];
-
-    r12 = pulFaultStackAddress[ 4 ];
-    lr = pulFaultStackAddress[ 5 ];
-    pc = pulFaultStackAddress[ 6 ];
-    psr = pulFaultStackAddress[ 7 ];
-
-	GPIO_SetStatusLED_ERR();
-
-    /* When the following line is hit, the variables contain the register values. */
-    for( ;; );
 }
 
 /**
@@ -294,6 +265,20 @@ void TIM1_UP_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM3 global interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+
+  /* USER CODE END TIM3_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim3);
+  /* USER CODE BEGIN TIM3_IRQn 1 */
+
+  /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
   * @brief This function handles SPI1 global interrupt.
   */
 void SPI1_IRQHandler(void)
@@ -307,21 +292,66 @@ void SPI1_IRQHandler(void)
   /* USER CODE END SPI1_IRQn 1 */
 }
 
+/* USER CODE BEGIN 1 */
+
 /**
-  * @brief This function handles USART1 global interrupt.
-  */
+ *  Custom UART IRQ handler, none of that HAL bullcrap.
+ *
+ *  Places incoming characters into buffer for processing by main application.
+ *
+ */
 void USART1_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART1_IRQn 0 */
+  static volatile uint8_t dataBuf;
 
-  /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
-  /* USER CODE BEGIN USART1_IRQn 1 */
+  // Received a character over UART
+  if (__HAL_UART_GET_IT_SOURCE(&huart1, UART_IT_RXNE)) {
 
-  /* USER CODE END USART1_IRQn 1 */
+    // Read the character in the data register (do this first to ensure data
+    // is not lost by any means). This also clears the RXNE flag
+    dataBuf = huart1.Instance->DR;
+
+    // If the overflow flag has been set from previous characters, simply ignore
+    // further incoming characters
+    if (uartRxBufOvf) {
+      return;
+    }
+
+    // Reset the UART Timeout timer everytime we receive a new character
+    // When the sender stops sending characters, the timer will overflow
+    // and signal to us to start processing the buffers
+    __HAL_TIM_SET_COUNTER(&htim3, 0);
+
+    // Store the character in the buffer and check for overflow
+    currentBuf[uartRxCnt++] = dataBuf;
+
+    // We've filled the buffer, signal overflow
+    if (uartRxCnt == UART_RX_BUFSIZ) {
+      uartRxBufOvf = 1;
+    }
+  }
 }
 
-/* USER CODE BEGIN 1 */
+/**
+ *  Invoked by an internal timer to signal that the UART Rx process is
+ *  over. Swap the Rx buffers and signal to the application to start
+ *  processing the data
+ *
+ */
+void UartRxDoneCallback(void) {
+
+  // Toggle the buffers
+  bufToProcess = currentBuf;
+  currentBuf = (currentBuf == uartRxBuf1 ? uartRxBuf2 : uartRxBuf1);
+
+  // Replace with OS API call
+  uartDataReady = 1;
+
+  // Update the Rx byte counts and clear overflow flag
+  uartRxCntToProcess = uartRxCnt;
+  uartRxCnt = 0;
+  uartRxBufOvf = 0;
+}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

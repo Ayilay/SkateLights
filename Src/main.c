@@ -59,6 +59,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stm32f1xx_it.h"
 #include "Tasks/tasks.h"
 /* USER CODE END Includes */
 
@@ -226,6 +227,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+
+  // Timer 3 is the UART Rx Timeout indicator. If it overflows,
+  // indicate to the UART code to process the received data
+  if (htim->Instance == TIM3) {
+    __HAL_TIM_DISABLE(&htim3);
+    UartRxDoneCallback();
+  }
 
   /* USER CODE END Callback 1 */
 }

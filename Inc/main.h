@@ -92,10 +92,6 @@ void Error_Handler(void);
 #define LED_OK_GPIO_Port GPIOA
 #define LED_ERR_Pin GPIO_PIN_12
 #define LED_ERR_GPIO_Port GPIOA
-#define SEG2B_Pin GPIO_PIN_8
-#define SEG2B_GPIO_Port GPIOB
-#define SEG2C_Pin GPIO_PIN_9
-#define SEG2C_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

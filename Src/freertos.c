@@ -96,11 +96,13 @@ osThreadId uartSenderHandle;
 osThreadId neopixelDriverHandle;
 osThreadId speedCalculatorHandle;
 osThreadId neopixelDickeryHandle;
+osThreadId uartReceiverHandle;
 osMessageQId UartSendQueueHandle;
 osMessageQId wheelSpeedQueueHandle;
 osTimerId dispResetTimerHandle;
 osMutexId pixelPreBufferMutexHandle;
 osSemaphoreId neopixelDriverEnableHandle;
+osSemaphoreId uartRxBufReadyHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -117,6 +119,7 @@ extern void TaskUartSender(void const * argument);
 extern void TaskNeopixelDriver(void const * argument);
 extern void TaskSpeedCalculator(void const * argument);
 extern void TaskNeopixelDickery(void const * argument);
+void TaskUartReceiver(void const * argument);
 extern void dispResetTimerCallback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -169,6 +172,10 @@ void MX_FREERTOS_Init(void) {
   osSemaphoreDef(neopixelDriverEnable);
   neopixelDriverEnableHandle = osSemaphoreCreate(osSemaphore(neopixelDriverEnable), 1);
 
+  /* definition and creation of uartRxBufReady */
+  osSemaphoreDef(uartRxBufReady);
+  uartRxBufReadyHandle = osSemaphoreCreate(osSemaphore(uartRxBufReady), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -204,6 +211,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of neopixelDickery */
   osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 256);
   neopixelDickeryHandle = osThreadCreate(osThread(neopixelDickery), NULL);
+
+  /* definition and creation of uartReceiver */
+  osThreadDef(uartReceiver, TaskUartReceiver, osPriorityHigh, 0, 128);
+  uartReceiverHandle = osThreadCreate(osThread(uartReceiver), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -249,6 +260,24 @@ __weak void TaskSegmentCycler(void const * argument)
     osDelay(1);
   }
   /* USER CODE END TaskSegmentCycler */
+}
+
+/* USER CODE BEGIN Header_TaskUartReceiver */
+/**
+* @brief Function implementing the uartReceiver thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_TaskUartReceiver */
+void TaskUartReceiver(void const * argument)
+{
+  /* USER CODE BEGIN TaskUartReceiver */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END TaskUartReceiver */
 }
 
 /* Private application code --------------------------------------------------*/

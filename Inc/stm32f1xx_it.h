@@ -63,7 +63,7 @@
 
 /* Exported functions prototypes ---------------------------------------------*/
 void NMI_Handler(void);
-void HardFault_Handler(void) __attribute__((naked));
+void HardFault_Handler(void);
 void MemManage_Handler(void);
 void BusFault_Handler(void);
 void UsageFault_Handler(void);
@@ -72,9 +72,11 @@ void DMA1_Channel3_IRQHandler(void);
 void DMA1_Channel4_IRQHandler(void);
 void EXTI9_5_IRQHandler(void);
 void TIM1_UP_IRQHandler(void);
+void TIM3_IRQHandler(void);
 void SPI1_IRQHandler(void);
-void USART1_IRQHandler(void);
 /* USER CODE BEGIN EFP */
+
+void UartRxDoneCallback(void);
 
 /* USER CODE END EFP */
 

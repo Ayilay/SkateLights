@@ -77,50 +77,44 @@ void TaskSegmentCycler(void const * argument)
 
 	uint8_t index = 0;
 	uint8_t increasing = 1;
-	uint16_t segment = 0;
+	uint16_t digit = 0;
 	TickType_t prevWakeTime;
 
 #if(configUSE_TRACE_FACILITY == 1)
 	chn = xTraceRegisterString("SegmentCyclerChannel");
 #endif
 
-	//osStatus status;
-	//char* buf = NULL;
 	prevWakeTime = osKernelSysTick();
 
 	// First thing this task does is go into low-power mode
-	dispResetTimerCallback(NULL);
+	//dispResetTimerCallback(NULL);
+  osThreadSuspend(segmentCyclerHandle);
+  osDelay(2000);
 
   /* Infinite loop */
   for(;;)
   {
-  	segment = SEGMENT_CODES[index];
-  	if (increasing) {
-  		index ++;
+    for (int i = 0; i < 2; i++) {
+      for (int dig = 1; dig <= 8; dig++) {
+        digit = DIGIT_CODES[dig];
 
-			if (index >= NUM_SEGMENTS) {
-				index = NUM_SEGMENTS-2;
-				increasing = 0;
-			}
-  	}
-  	else {
-  		index --;
-			if (index <= 0) {
-				index = 0;
-				increasing = 1;
-			}
-  	}
+        // Turn all the Segment GPIO's off, then turn the relevant ones on
+        HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(SEGMENTS_PORT, digit, GPIO_PIN_SET);
 
-  	// Turn all the Segment GPIO's off, then turn the relevant ones on
-  	HAL_GPIO_WritePin(SEGMENTS_PORT, (0xFFFF & SEG1), GPIO_PIN_RESET);
-  	HAL_GPIO_WritePin(SEGMENTS_PORT, segment, GPIO_PIN_SET);
+        osDelay(2100/8);
 
-  	// Create a random new string of neopixel colors
-  	//randomizeNeopixels();
+        // Create a random new string of neopixel colors
+        //randomizeNeopixels();
 
-		// Signal to the neopixel driver task that we want it to update the neopixel colors
-		osSemaphoreRelease(neopixelDriverEnableHandle);
-		//osStatus status = osSemaphoreRelease(neopixelDriverEnableHandle);
+        // Signal to the neopixel driver task that we want it to update the neopixel colors
+        //osSemaphoreRelease(neopixelDriverEnableHandle);
+        //osStatus status = osSemaphoreRelease(neopixelDriverEnableHandle);
+      }
+
+      osDelay(2500);
+    }
+    osThreadSuspend(segmentCyclerHandle);
 
 #if(configUSE_TRACE_FACILITY == 1)
 		if (status != osOK) {
@@ -135,7 +129,7 @@ void TaskSegmentCycler(void const * argument)
   	// osDelayUntil will exit immediately until the prevWakeTime "catches up" (extreme runtimes of
   	// up to 500 ms have been observed)
     //osDelayUntil(&prevWakeTime, 70);
-    osDelay(200);
+    osDelay(400);
   }
   /* USER CODE END TaskSegmentCycler */
 }
@@ -146,8 +140,8 @@ void TaskSegmentCycler(void const * argument)
  * Turn the screen off and go into low power mode
  */
 void dispResetTimerCallback(void const * argument) {
-	osThreadSuspend(segmentCyclerHandle);
-	HAL_GPIO_WritePin(GPIOB, 0xFFFF & ~LED_ERR_Pin, GPIO_PIN_RESET);
+	//osThreadSuspend(segmentCyclerHandle);
+	HAL_GPIO_WritePin(GPIOB, 0xFFFF, GPIO_PIN_RESET);
 
 	char* str = osPoolAlloc(uartStrMemPoolHandle);
 	sprintf(str, "Entering Sleep Mode\r\n");
