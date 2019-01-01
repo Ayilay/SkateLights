@@ -64,9 +64,6 @@
 #include "string.h"
 #include "Tasks/tasks.h"
 
-// Custom printf implementations for embedded applications from GitHub:
-// https://github.com/mpaland/printf
-#include "printf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -275,6 +272,7 @@ void TaskUartReceiver(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+    osThreadIsSuspended(uartReceiverHandle);
     osDelay(1);
   }
   /* USER CODE END TaskUartReceiver */
