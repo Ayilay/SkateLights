@@ -123,14 +123,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 
   /* USER CODE BEGIN USART1_MspInit 1 */
 
-    // TODO This is done manually, bypassing HAL interrupt callback function
-    // generation. Remove if not necessary anymore
-    HAL_NVIC_SetPriority(USART1_IRQn, 6, 0);
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
-
-    __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);
-    __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
-
   /* USER CODE END USART1_MspInit 1 */
   }
 }

@@ -1,6 +1,6 @@
 #include "cmsis_os.h"
 #include "stm32f1xx_hal.h"
-#include "tasks.h"
+#include "applicationTasks.h"
 #include "usart.h"
 #include "gpio.h"
 #include "string.h"

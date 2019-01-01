@@ -56,26 +56,23 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */     
-#include "stm32f1xx_hal.h"
-#include "usart.h"
-#include "spi.h"
-#include "tim.h"
-#include "gpio.h"
-#include "string.h"
-#include "Tasks/tasks.h"
+#include "applicationTasks.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -93,7 +90,6 @@ osThreadId uartSenderHandle;
 osThreadId neopixelDriverHandle;
 osThreadId speedCalculatorHandle;
 osThreadId neopixelDickeryHandle;
-osThreadId uartReceiverHandle;
 osMessageQId UartSendQueueHandle;
 osMessageQId wheelSpeedQueueHandle;
 osTimerId dispResetTimerHandle;
@@ -103,11 +99,6 @@ osSemaphoreId uartRxBufReadyHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
-inline uint16_t segment1(uint16_t segment);
-inline uint16_t segment2(uint16_t segment);
-
-char* HALStatusToStr(HAL_StatusTypeDef status);
    
 /* USER CODE END FunctionPrototypes */
 
@@ -116,7 +107,6 @@ extern void TaskUartSender(void const * argument);
 extern void TaskNeopixelDriver(void const * argument);
 extern void TaskSpeedCalculator(void const * argument);
 extern void TaskNeopixelDickery(void const * argument);
-void TaskUartReceiver(void const * argument);
 extern void dispResetTimerCallback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -145,14 +135,15 @@ return 0;
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-	osPoolDef(uartStrMemPool, 5, uint8_t[64]);
-	uartStrMemPoolHandle = osPoolCreate(osPool(uartStrMemPool));
 
-	// Initialize the memory pool for the neopixel buffer, and immediately allocate memory for it
-	osPoolDef(neopixelBufferPool, 1, NeopixelArray_t);
-	neopixelBufferPoolHandle = osPoolCreate(osPool(neopixelBufferPool));
-	osPoolCAlloc(neopixelBufferPoolHandle);
-       
+  osPoolDef(uartStrMemPool, 5, uint8_t[64]);
+  uartStrMemPoolHandle = osPoolCreate(osPool(uartStrMemPool));
+
+  // Initialize the memory pool for the neopixel buffer, and immediately allocate memory for it
+  osPoolDef(neopixelBufferPool, 1, NeopixelArray_t);
+  neopixelBufferPoolHandle = osPoolCreate(osPool(neopixelBufferPool));
+  osPoolCAlloc(neopixelBufferPoolHandle);
+
   /* USER CODE END Init */
 
   /* Create the mutex(es) */
@@ -161,7 +152,7 @@ void MX_FREERTOS_Init(void) {
   pixelPreBufferMutexHandle = osMutexCreate(osMutex(pixelPreBufferMutex));
 
   /* USER CODE BEGIN RTOS_MUTEX */
-
+  /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
@@ -183,9 +174,7 @@ void MX_FREERTOS_Init(void) {
   dispResetTimerHandle = osTimerCreate(osTimer(dispResetTimer), osTimerOnce, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
-
-  // Invoke the callback of the low-power timer
-
+  /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the thread(s) */
@@ -209,10 +198,6 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 256);
   neopixelDickeryHandle = osThreadCreate(osThread(neopixelDickery), NULL);
 
-  /* definition and creation of uartReceiver */
-  osThreadDef(uartReceiver, TaskUartReceiver, osPriorityHigh, 0, 128);
-  uartReceiverHandle = osThreadCreate(osThread(uartReceiver), NULL);
-
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -228,23 +213,14 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
-
-  // Add custom names for the queues for Tracealyzer
-#if(configUSE_TRACE_FACILITY == 1)
-  vTraceSetQueueName(wheelSpeedQueueHandle, "Wheel Speed");
-  vTraceSetQueueName(UartSendQueueHandle, "UART");
-  vTraceSetSemaphoreName(neopixelDriverEnableHandle, "Neopixel Enable");
-  vTraceSetMutexName(pixelPreBufferMutexHandle, "Pixel Buffer");
-#endif
-
   /* USER CODE END RTOS_QUEUES */
 }
 
 /* USER CODE BEGIN Header_TaskSegmentCycler */
 /**
-  * @brief  This function is defined under Tasks/taskSegmentCycler.
-  * 				It is a weak function because STM32CubeMX does not allow
-  * 				the first task to be external. Kinda silly in my opinion
+  * @brief  Function implementing the segmentCycler thread.
+  * @param  argument: Not used 
+  * @retval None
   */
 /* USER CODE END Header_TaskSegmentCycler */
 __weak void TaskSegmentCycler(void const * argument)
@@ -259,59 +235,9 @@ __weak void TaskSegmentCycler(void const * argument)
   /* USER CODE END TaskSegmentCycler */
 }
 
-/* USER CODE BEGIN Header_TaskUartReceiver */
-/**
-* @brief Function implementing the uartReceiver thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_TaskUartReceiver */
-void TaskUartReceiver(void const * argument)
-{
-  /* USER CODE BEGIN TaskUartReceiver */
-  /* Infinite loop */
-  for(;;)
-  {
-    osThreadIsSuspended(uartReceiverHandle);
-    osDelay(1);
-  }
-  /* USER CODE END TaskUartReceiver */
-}
-
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
-// Useful for debug purposes
-char* HALStatusToStr(HAL_StatusTypeDef status) {
-  switch (status) {
-    case HAL_OK:
-      return "HAL_OK";
-      break;
-    case HAL_TIMEOUT:
-      return "HAL_TIMEOUT";
-      break;
-    case HAL_ERROR:
-      return "HAL_ERROR";
-      break;
-    case HAL_BUSY:
-      return "HAL_BUSY";
-      break;
-    default:
-      return "BAD_STAT";
-  }
-}
-
-// TODO FIXME
-inline uint16_t segment1(uint16_t segment) {
-	return segment;
-	//return 0x007F & segment;
-}
-
-// TODO FIXME
-inline uint16_t segment2(uint16_t segment) {
-	return segment;
-	//return 0x3F80 & (segment << 7);
-}
+     
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

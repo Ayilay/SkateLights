@@ -1,5 +1,5 @@
 #include "stm32f1xx_hal.h"
-#include "tasks.h"
+#include "applicationTasks.h"
 #include "spi.h"
 
 inline uint8_t convBitToSerial(uint8_t bit);
@@ -34,26 +34,15 @@ void TaskNeopixelDriver(void const * argument)
 	uint8_t* p;
 	NeopixelColor_t* pixArrPtr = ((NeopixelArray_t *) neopixelBufferPoolHandle)->array;
 
-#if (configUSE_TRACE_FACILITY == 1)
-	traceString chn;
-	chn = xTraceRegisterString("NeopixelDriver");
-#endif
-
   /* Infinite loop */
   for(;;)
   {
   	// Wait for the "Neopixel Enable" semaphore to be given, which wakes this task up and
   	// makes it drive the neopixel output in a single stream
   	osSemaphoreWait(neopixelDriverEnableHandle, osWaitForever);
-#if(configUSE_TRACE_FACILITY == 1)
-		vTracePrint(chn, "Enabling Neopixel Driver");
-#endif
 
   	// Lock access to the pre-buffer so that we can construct the buffer
   	osMutexWait(pixelPreBufferMutexHandle, osWaitForever);
-#if(configUSE_TRACE_FACILITY == 1)
-		vTracePrint(chn, "preBufferMutex obtained");
-#endif
 
   	// Initialize the pointer to the buffer
 		p = neopixelBuffer;
@@ -92,9 +81,6 @@ void TaskNeopixelDriver(void const * argument)
 
   	// Done constructing the buffer, release the prebuffer mutex
   	osMutexRelease(pixelPreBufferMutexHandle);
-#if(configUSE_TRACE_FACILITY == 1)
-		vTracePrint(chn, "preBufferMutex released");
-#endif
 
   	// Prepare to transmit the buffer over SPI (wait until all SPI transactions finish)
   	while (hspi1.State != HAL_SPI_STATE_READY) {
@@ -104,9 +90,6 @@ void TaskNeopixelDriver(void const * argument)
   	// The SPI peripheral is ready, use DMA to transmit the buffer
   	HAL_SPI_Transmit_DMA(&hspi1, neopixelBuffer, numData);
 
-#if(configUSE_TRACE_FACILITY == 1)
-		vTracePrint(chn, "Pixel Driving via DMA Initiated");
-#endif
   }
   /* USER CODE END TaskNeopixelDriver */
 }

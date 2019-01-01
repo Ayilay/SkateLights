@@ -1,4 +1,4 @@
-#include "tasks.h"
+#include "applicationTasks.h"
 #include "stm32f1xx_hal.h"
 #include "gpio.h"
 
@@ -58,11 +58,6 @@ uint16_t DIGIT_CODES[NUM_DIGITS] = {
 // Function Prototypes
 void randomizeNeopixels();
 
-#if(configUSE_TRACE_FACILITY == 1)
-traceString chn;
-#endif
-
-
 /* USER CODE BEGIN Header_TaskSegmentCycler */
 /**
   * @brief  Function implementing the segmentCycler thread.
@@ -79,10 +74,6 @@ void TaskSegmentCycler(void const * argument)
 	uint8_t increasing = 1;
 	uint16_t digit = 0;
 	TickType_t prevWakeTime;
-
-#if(configUSE_TRACE_FACILITY == 1)
-	chn = xTraceRegisterString("SegmentCyclerChannel");
-#endif
 
 	prevWakeTime = osKernelSysTick();
 
@@ -115,15 +106,6 @@ void TaskSegmentCycler(void const * argument)
       osDelay(2500);
     }
     osThreadSuspend(segmentCyclerHandle);
-
-#if(configUSE_TRACE_FACILITY == 1)
-		if (status != osOK) {
-			vTracePrint(chn, "Failed to release neopixelDriverEnable semaphore");
-		}
-		else {
-			vTracePrint(chn, "Semaphore neopixelDriverEnable given up");
-		}
-#endif
 
   	// WARNING: When this task is suspended for long amounts of time and then resumed, then
   	// osDelayUntil will exit immediately until the prevWakeTime "catches up" (extreme runtimes of
@@ -159,9 +141,6 @@ void randomizeNeopixels() {
 	osStatus status = osMutexWait(pixelPreBufferMutexHandle, 20);
 
 	if (status != osOK) {
-#if(configUSE_TRACE_FACILITY == 1)
-		vTracePrint(chn, "Failed to obtain preBufferMutex");
-#endif
 		return;
 	}
 

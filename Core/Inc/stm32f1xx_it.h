@@ -76,8 +76,6 @@ void TIM3_IRQHandler(void);
 void SPI1_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
-void UartRxDoneCallback(void);
-
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

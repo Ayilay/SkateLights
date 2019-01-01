@@ -150,7 +150,6 @@ void GPIO_SetStatusLED_ERR() {
   HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_OK_Pin, GPIO_PIN_SET);
 }
-
 /* USER CODE END 2 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -1,4 +1,4 @@
-#include "tasks.h"
+#include "applicationTasks.h"
 #include "cmsis_os.h"
 #include "tim.h"
 #include "printf.h"
@@ -10,18 +10,10 @@
 #define DIST_PER_REV	(3.141592F * WHEEL_DIAM)
 #define CM_S_TO_MPH		44.704
 
-#if(configUSE_TRACE_FACILITY == 1)
-	traceHandle SpeedInterruptHandle;
-#endif
-
 void TaskSpeedCalculator(void const * argument) {
 	uint16_t deltaT = 0;
 	uint8_t* buf;
 	float speed;
-
-#if(configUSE_TRACE_FACILITY == 1)
-	SpeedInterruptHandle = xTraceSetISRProperties("SpeedInterruptHandle", 3);
-#endif
 
 	// Enable the wheel speed counter
 	HAL_TIM_Base_Start(&SPEED_TIMER);
@@ -62,10 +54,6 @@ void TaskSpeedCalculator(void const * argument) {
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
-#if(configUSE_TRACE_FACILITY == 1)
-	vTraceStoreISRBegin(SpeedInterruptHandle);
-#endif
-
   portBASE_TYPE taskWoken = pdFALSE;
 
 	// Record the current change in time since the last revolution
@@ -82,8 +70,5 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     xQueueSendFromISR(wheelSpeedQueueHandle, deltaT, &taskWoken);
 	}
 
-#if(configUSE_TRACE_FACILITY == 1)
-	vTraceStoreISREnd(0);
-#endif
 	portEND_SWITCHING_ISR(taskWoken);
 }

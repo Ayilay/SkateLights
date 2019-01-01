@@ -86,7 +86,6 @@
 
 /* USER CODE BEGIN Includes */   	      
 /* Section where include file can be added */
-#include "gpio.h"
 /* USER CODE END Includes */ 
 
 /* Ensure stdint is only used by the compiler, and not the assembler. */
@@ -174,7 +173,7 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 /* Normal assert() semantics without relying on the provision of an assert.h
 header file. */
 /* USER CODE BEGIN 1 */
-#define configASSERT( x ) if ((x) == 0) {GPIO_SetStatusLED_ERR(); taskDISABLE_INTERRUPTS(); for( ;; ){}}
+#define configASSERT( x ) if ((x) == 0) {taskDISABLE_INTERRUPTS(); for( ;; );} 
 /* USER CODE END 1 */
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
@@ -193,12 +192,7 @@ standard names. */
 /* USER CODE END 2 */
 
 /* USER CODE BEGIN Defines */   	      
-/* Integrates the Tracealyzer recorder with FreeRTOS */
-#if ( configUSE_TRACE_FACILITY == 1 )
-#include "trcRecorder.h"
-#endif
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
-
 /* USER CODE END Defines */ 
 
 #endif /* FREERTOS_CONFIG_H */
