@@ -85,14 +85,12 @@ osPoolId uartStrMemPoolHandle;
 osPoolId neopixelBufferPoolHandle;
 
 /* USER CODE END Variables */
-osThreadId segmentCyclerHandle;
+osThreadId defaultTaskHandle;
 osThreadId uartSenderHandle;
 osThreadId neopixelDriverHandle;
 osThreadId speedCalculatorHandle;
-osThreadId neopixelDickeryHandle;
 osMessageQId UartSendQueueHandle;
 osMessageQId wheelSpeedQueueHandle;
-osTimerId dispResetTimerHandle;
 osMutexId pixelPreBufferMutexHandle;
 osSemaphoreId neopixelDriverEnableHandle;
 osSemaphoreId uartRxBufReadyHandle;
@@ -102,12 +100,10 @@ osSemaphoreId uartRxBufReadyHandle;
    
 /* USER CODE END FunctionPrototypes */
 
-void TaskSegmentCycler(void const * argument);
+void defaultTaskUnused(void const * argument);
 extern void TaskUartSender(void const * argument);
 extern void TaskNeopixelDriver(void const * argument);
 extern void TaskSpeedCalculator(void const * argument);
-extern void TaskNeopixelDickery(void const * argument);
-extern void dispResetTimerCallback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -168,19 +164,14 @@ void MX_FREERTOS_Init(void) {
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
-  /* Create the timer(s) */
-  /* definition and creation of dispResetTimer */
-  osTimerDef(dispResetTimer, dispResetTimerCallback);
-  dispResetTimerHandle = osTimerCreate(osTimer(dispResetTimer), osTimerOnce, NULL);
-
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the thread(s) */
-  /* definition and creation of segmentCycler */
-  osThreadDef(segmentCycler, TaskSegmentCycler, osPriorityNormal, 0, 256);
-  segmentCyclerHandle = osThreadCreate(osThread(segmentCycler), NULL);
+  /* definition and creation of defaultTask */
+  osThreadDef(defaultTask, defaultTaskUnused, osPriorityIdle, 0, 64);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of uartSender */
   osThreadDef(uartSender, TaskUartSender, osPriorityHigh, 0, 128);
@@ -193,10 +184,6 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of speedCalculator */
   osThreadDef(speedCalculator, TaskSpeedCalculator, osPriorityNormal, 0, 128);
   speedCalculatorHandle = osThreadCreate(osThread(speedCalculator), NULL);
-
-  /* definition and creation of neopixelDickery */
-  osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 256);
-  neopixelDickeryHandle = osThreadCreate(osThread(neopixelDickery), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -216,23 +203,23 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 }
 
-/* USER CODE BEGIN Header_TaskSegmentCycler */
+/* USER CODE BEGIN Header_defaultTaskUnused */
 /**
-  * @brief  Function implementing the segmentCycler thread.
+  * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used 
   * @retval None
   */
-/* USER CODE END Header_TaskSegmentCycler */
-__weak void TaskSegmentCycler(void const * argument)
+/* USER CODE END Header_defaultTaskUnused */
+void defaultTaskUnused(void const * argument)
 {
 
-  /* USER CODE BEGIN TaskSegmentCycler */
+  /* USER CODE BEGIN defaultTaskUnused */
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
   }
-  /* USER CODE END TaskSegmentCycler */
+  /* USER CODE END defaultTaskUnused */
 }
 
 /* Private application code --------------------------------------------------*/

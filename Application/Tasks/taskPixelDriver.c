@@ -4,7 +4,6 @@
 
 inline uint8_t convBitToSerial(uint8_t bit);
 
-/* USER CODE BEGIN Header_TaskNeopixelDriver */
 /**
 * Inspiration for using SPI/DMA came from
 * https://www.rogerclark.net/arduino-stm32-neopixels-ws2812b-using-spi-dma/
@@ -14,15 +13,9 @@ inline uint8_t convBitToSerial(uint8_t bit);
 * DMA-driven SPI output is essentially non-interruptible and independent of
 * the CPU, making this approach better for a multithreaded environment.
 *
-* @brief Function implementing the neopixelDriver thread.
-* @param argument: Not used
-* @retval None
 */
-/* USER CODE END Header_TaskNeopixelDriver */
 void TaskNeopixelDriver(void const * argument)
 {
-  /* USER CODE BEGIN TaskNeopixelDriver */
-
 	// The buffer to stream to the neopixels over SPI
 	// Include space for leading and trailing zeros
 	#define numData (sizeof(NeopixelArray_t)*3) + 2
@@ -34,7 +27,6 @@ void TaskNeopixelDriver(void const * argument)
 	uint8_t* p;
 	NeopixelColor_t* pixArrPtr = ((NeopixelArray_t *) neopixelBufferPoolHandle)->array;
 
-  /* Infinite loop */
   for(;;)
   {
   	// Wait for the "Neopixel Enable" semaphore to be given, which wakes this task up and
@@ -91,7 +83,6 @@ void TaskNeopixelDriver(void const * argument)
   	HAL_SPI_Transmit_DMA(&hspi1, neopixelBuffer, numData);
 
   }
-  /* USER CODE END TaskNeopixelDriver */
 }
 
 inline uint8_t convBitToSerial(uint8_t bit) {

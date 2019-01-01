@@ -5,21 +5,11 @@
 #include "gpio.h"
 #include "string.h"
 
-/* USER CODE BEGIN Header_TaskUartSender */
-/**
-* @brief Function implementing the uartSender thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_TaskUartSender */
 void TaskUartSender(void const * argument)
 {
-  /* USER CODE BEGIN TaskUartSender */
-
 	HAL_StatusTypeDef status;
 	char* strToPrint;
 
-  /* Infinite loop */
   for(;;)
   {
   	// TODO Use a Mail queue instead of a message queue
@@ -27,7 +17,6 @@ void TaskUartSender(void const * argument)
   	// Wait indefinitely for someone to put a message on the UartSendQueue
   	// As soon as something is put on the queue, wake up and print the string over UART
   	strToPrint = osMessageGet(UartSendQueueHandle, osWaitForever).value.p;
-		//status = HAL_UART_Transmit(&huart1, strToPrint, strlen(strToPrint), 10);
 		status = HAL_UART_Transmit_DMA(&huart1, (uint8_t*) strToPrint, strlen(strToPrint));
 
 		// Indicate if something went wrong (primitive error checking)
@@ -47,5 +36,4 @@ void TaskUartSender(void const * argument)
 		osPoolFree(uartStrMemPoolHandle, strToPrint);
 
   }
-  /* USER CODE END TaskUartSender */
 }

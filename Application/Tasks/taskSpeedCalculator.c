@@ -22,10 +22,6 @@ void TaskSpeedCalculator(void const * argument) {
 		// Wait forever until a new speed is posted on the queue
 		deltaT = (uint16_t) osMessageGet(wheelSpeedQueueHandle, osWaitForever).value.v;
 
-		// Resume this thread if it is suspended
-		osThreadResume(segmentCyclerHandle);
-		osTimerStart(dispResetTimerHandle, 15000);
-
 		// Print the speed to the user for debug purposes
 		buf = osPoolAlloc(uartStrMemPoolHandle);
 		if (deltaT == 0) {
@@ -34,7 +30,6 @@ void TaskSpeedCalculator(void const * argument) {
 		else {
 			// SUPERMULT = 75.897444
 			#define SUPERMULT (TIME_MULT * DIST_PER_REV / CM_S_TO_MPH)
-			//speed = (TIME_MULT / deltaT) * DIST_PER_REV / CM_S_TO_MPH;
 			speed = SUPERMULT / deltaT;
 
 			if (speed > 20) {
@@ -57,7 +52,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   portBASE_TYPE taskWoken = pdFALSE;
 
 	// Record the current change in time since the last revolution
-	volatile uint16_t deltaT = SPEED_TIMER.Instance->CNT;
+	volatile uint32_t deltaT = SPEED_TIMER.Instance->CNT;
 
 	// Reset the counter
 	__HAL_TIM_DISABLE(&SPEED_TIMER);
@@ -66,8 +61,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 	// Send the deltaT to the global speed queue to be parsed
 	if (deltaT != 0) {
-		//osMessagePut(wheelSpeedQueueHandle, deltaT, 0);
-    xQueueSendFromISR(wheelSpeedQueueHandle, deltaT, &taskWoken);
+    xQueueSendFromISR(wheelSpeedQueueHandle, (const void* const) deltaT, &taskWoken);
 	}
 
 	portEND_SWITCHING_ISR(taskWoken);

@@ -31,7 +31,6 @@ extern osPoolId uartStrMemPoolHandle;
 // Memory pool to contain buffer for the neopixels
 extern osPoolId neopixelBufferPoolHandle;
 
-void TaskSegmentCycler(void const * argument);
 void TaskUartSender(void const * argument);
 void TaskNeopixelDriver(void const * argument);
 
