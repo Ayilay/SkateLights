@@ -170,7 +170,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, defaultTaskUnused, osPriorityIdle, 0, 64);
+  osThreadDef(defaultTask, defaultTaskUnused, osPriorityNormal, 0, 64);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of uartSender */
@@ -209,6 +209,9 @@ void MX_FREERTOS_Init(void) {
   * @param  argument: Not used 
   * @retval None
   */
+
+// lmao global variable
+int count = 0;
 /* USER CODE END Header_defaultTaskUnused */
 void defaultTaskUnused(void const * argument)
 {
@@ -217,7 +220,8 @@ void defaultTaskUnused(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    ITM_SendCharOnChannel(count++, 1);
+    osDelay(100);
   }
   /* USER CODE END defaultTaskUnused */
 }

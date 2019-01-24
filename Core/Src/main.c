@@ -130,6 +130,9 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
+  // Turn the "Bad Stuff" LED to Green
+  void GPIO_SetStatusLED_OK();
+
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

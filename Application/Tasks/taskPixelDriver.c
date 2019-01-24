@@ -82,6 +82,12 @@ void TaskNeopixelDriver(void const * argument)
   	// The SPI peripheral is ready, use DMA to transmit the buffer
   	HAL_SPI_Transmit_DMA(&hspi1, neopixelBuffer, numData);
 
+  	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
+  	HAL_Delay(500);
+  	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+  	HAL_Delay(500);
+  	//digitalWrite(B3, HIGH);
+
   }
 }
 
