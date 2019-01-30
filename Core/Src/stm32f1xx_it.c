@@ -36,9 +36,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_it.h"
-#include "cmsis_os.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "tim.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -160,6 +160,19 @@ void UsageFault_Handler(void)
 }
 
 /**
+  * @brief This function handles System service call via SWI instruction.
+  */
+void SVC_Handler(void)
+{
+  /* USER CODE BEGIN SVCall_IRQn 0 */
+
+  /* USER CODE END SVCall_IRQn 0 */
+  /* USER CODE BEGIN SVCall_IRQn 1 */
+
+  /* USER CODE END SVCall_IRQn 1 */
+}
+
+/**
   * @brief This function handles Debug monitor.
   */
 void DebugMon_Handler(void)
@@ -170,6 +183,19 @@ void DebugMon_Handler(void)
   /* USER CODE BEGIN DebugMonitor_IRQn 1 */
 
   /* USER CODE END DebugMonitor_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Pendable request for system service.
+  */
+void PendSV_Handler(void)
+{
+  /* USER CODE BEGIN PendSV_IRQn 0 */
+
+  /* USER CODE END PendSV_IRQn 0 */
+  /* USER CODE BEGIN PendSV_IRQn 1 */
+
+  /* USER CODE END PendSV_IRQn 1 */
 }
 
 /******************************************************************************/
@@ -265,5 +291,34 @@ void SPI1_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
+#define WHEEL_DIAM 		10.8
+#define TIME_MULT			1000.0F
+#define DIST_PER_REV	(3.141592F * WHEEL_DIAM)
+#define CM_S_TO_MPH		44.704
+#define SUPERMULT (TIME_MULT * DIST_PER_REV / CM_S_TO_MPH)
+
+uint32_t speed;
+extern timeoutFlag;
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+
+
+  // Record the current change in time since the last revolution
+  static uint32_t deltaT;
+  deltaT = htim2.Instance->CNT;
+
+	// Reset the counter
+	__HAL_TIM_DISABLE(&htim2);
+	__HAL_TIM_SET_COUNTER(&htim2, 0);
+	__HAL_TIM_ENABLE(&htim2);
+
+	timeoutFlag = 0;
+
+
+	// Send the deltaT to the global speed queue to be parsed
+	if (deltaT != 0) {
+			speed = SUPERMULT / deltaT;
+	}
+}
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

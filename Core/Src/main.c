@@ -50,7 +50,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
@@ -70,6 +69,72 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+// Segment GPIOs
+#define SEG2A	(1 << 8)
+#define SEG2B	(1 << 7)
+#define SEG2C	(1 << 6)
+#define SEG2D	(1 << 5)
+#define SEG2E	(1 << 4)
+#define SEG2F	(1 << 3)
+#define SEG2G	(1 << 0)
+
+#define SEG1A	(1 << 1)
+#define SEG1B	(1 << 10)
+#define SEG1C	(1 << 11)
+#define SEG1D	(1 << 15)
+#define SEG1E	(1 << 14)
+#define SEG1F	(1 << 13)
+#define SEG1G	(1 << 12)
+
+// Character Definitions, constructed from Segments
+#define DIGIT1_0		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1E | SEG1F )
+#define DIGIT1_1		( SEG1B | SEG1C )
+#define DIGIT1_2		( SEG1A | SEG1B | SEG1D | SEG1E | SEG1G )
+#define DIGIT1_3		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1G )
+#define DIGIT1_4		( SEG1B | SEG1C | SEG1F | SEG1G )
+#define DIGIT1_5		( SEG1A | SEG1C | SEG1D | SEG1F | SEG1G )
+#define DIGIT1_6		( SEG1A | SEG1C | SEG1D | SEG1E | SEG1F | SEG1G )
+#define DIGIT1_7		( SEG1A | SEG1B | SEG1C )
+#define DIGIT1_8		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1E | SEG1F | SEG1G )
+#define DIGIT1_9		( SEG1A | SEG1B | SEG1C | SEG1D | SEG1F | SEG1G )
+
+#define DIGIT2_0		( SEG2A | SEG2B | SEG2C | SEG2D | SEG2E | SEG2F )
+#define DIGIT2_1		( SEG2B | SEG2C )
+#define DIGIT2_2		( SEG2A | SEG2B | SEG2D | SEG2E | SEG2G )
+#define DIGIT2_3		( SEG2A | SEG2B | SEG2C | SEG2D | SEG2G )
+#define DIGIT2_4		( SEG2B | SEG2C | SEG2F | SEG2G )
+#define DIGIT2_5		( SEG2A | SEG2C | SEG2D | SEG2F | SEG2G )
+#define DIGIT2_6		( SEG2A | SEG2C | SEG2D | SEG2E | SEG2F | SEG2G )
+#define DIGIT2_7		( SEG2A | SEG2B | SEG2C )
+#define DIGIT2_8		( SEG2A | SEG2B | SEG2C | SEG2D | SEG2E | SEG2F | SEG2G )
+#define DIGIT2_9		( SEG2A | SEG2B | SEG2C | SEG2D | SEG2F | SEG2G )
+
+uint16_t digit1Segments[] = {
+  DIGIT1_0,
+  DIGIT1_1,
+  DIGIT1_2,
+  DIGIT1_3,
+  DIGIT1_4,
+  DIGIT1_5,
+  DIGIT1_6,
+  DIGIT1_7,
+  DIGIT1_8,
+  DIGIT1_9
+};
+
+uint16_t digit2Segments[] = {
+  DIGIT2_0,
+  DIGIT2_1,
+  DIGIT2_2,
+  DIGIT2_3,
+  DIGIT2_4,
+  DIGIT2_5,
+  DIGIT2_6,
+  DIGIT2_7,
+  DIGIT2_8,
+  DIGIT2_9
+};
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -80,18 +145,19 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint32_t deltaT;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+int timeoutFlag = 0;
 
 /* USER CODE END 0 */
 
@@ -133,23 +199,29 @@ int main(void)
   // Turn the "Bad Stuff" LED to Green
   void GPIO_SetStatusLED_OK();
 
+	//NeopixelColor_t* pixArrPtr = ((NeopixelArray_t *) neopixelBufferPoolHandle)->array;
+	//NeopixelColor_t pixOff = {0,0,0};
+  //for (int i = NUM_NEOPIXELS; i > 0; i--) {
+  //  pixArrPtr[i] = pixOff;
+  //}
+
   /* USER CODE END 2 */
-
-  /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
-
-  /* Start scheduler */
-  osKernelStart();
-  
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_GPIO_WritePin(GPIOB, ~0, GPIO_PIN_SET);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+    setScreenSpeed();
+    HAL_Delay(100);
+
+    timeoutFlag ++;
+    if (timeoutFlag > 10)
+      speed = 0;
   }
   /* USER CODE END 3 */
 }
@@ -195,6 +267,35 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+#define abs(x)  ((x < 0) ? (-x) : (x))
+
+void WriteNeoPixels(uint8_t* buf) {
+}
+
+volatile int speedPrev = 0;
+
+void setScreenSpeed() {
+  uint32_t dig1, dig2;
+
+  //if (speed > 20) return;
+  if (abs(speedPrev - speed) > 5){
+    speedPrev = speed;
+    return;
+  }
+
+  // Hopefully this doesn't get interrupted
+  dig2 = speed / 10;
+  dig1 = speed % 10;
+
+  uint32_t output = 0;
+  output |= digit1Segments[dig1];
+  output |= digit2Segments[dig2];
+
+  HAL_GPIO_WritePin(GPIOB, ~0, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, output, GPIO_PIN_SET);
+
+  speedPrev = speed;
+}
 
 /* USER CODE END 4 */
 

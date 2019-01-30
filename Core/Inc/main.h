@@ -68,6 +68,8 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
+extern uint32_t speed;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
