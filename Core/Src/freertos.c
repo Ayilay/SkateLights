@@ -168,6 +168,19 @@ void MX_FREERTOS_Init(void) {
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* definition and creation of UartSendQueue */
+  osMessageQDef(UartSendQueue, 4, uint32_t);
+  UartSendQueueHandle = osMessageCreate(osMessageQ(UartSendQueue), NULL);
+
+  /* definition and creation of wheelSpeedQueue */
+  osMessageQDef(wheelSpeedQueue, 1, uint16_t);
+  wheelSpeedQueueHandle = osMessageCreate(osMessageQ(wheelSpeedQueue), NULL);
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
   osThreadDef(defaultTask, defaultTaskUnused, osPriorityIdle, 0, 64);
@@ -189,18 +202,6 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
-  /* Create the queue(s) */
-  /* definition and creation of UartSendQueue */
-  osMessageQDef(UartSendQueue, 4, uint32_t);
-  UartSendQueueHandle = osMessageCreate(osMessageQ(UartSendQueue), NULL);
-
-  /* definition and creation of wheelSpeedQueue */
-  osMessageQDef(wheelSpeedQueue, 1, uint16_t);
-  wheelSpeedQueueHandle = osMessageCreate(osMessageQ(wheelSpeedQueue), NULL);
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
 }
 
 /* USER CODE BEGIN Header_defaultTaskUnused */
