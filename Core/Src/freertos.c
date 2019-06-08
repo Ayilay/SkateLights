@@ -98,12 +98,16 @@ osSemaphoreId uartRxBufReadyHandle;
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
    
+osThreadId neopixelDickeryHandle;
+osThreadId displaySpeedHandle;
 /* USER CODE END FunctionPrototypes */
 
 void defaultTaskUnused(void const * argument);
 extern void TaskUartSender(void const * argument);
 extern void TaskNeopixelDriver(void const * argument);
 extern void TaskSpeedCalculator(void const * argument);
+extern void TaskNeopixelDickery(void const * argument);
+extern void TaskDisplaySpeed(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -200,6 +204,11 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  osThreadDef(neopixelDickery, TaskNeopixelDickery, osPriorityNormal, 0, 128);
+  neopixelDickeryHandle = osThreadCreate(osThread(neopixelDickery), NULL);
+
+  osThreadDef(displaySpeed, TaskDisplaySpeed, osPriorityNormal, 0, 64);
+  displaySpeedHandle = osThreadCreate(osThread(displaySpeed), NULL);
   /* USER CODE END RTOS_THREADS */
 
 }
