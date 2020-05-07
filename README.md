@@ -1,3 +1,5 @@
+<img src="https://img.shields.io/badge/Project%20Status-Rev 2 WIP-orange" />
+
 # SkateLights
 
 My skateboard, despite being a plain old-fashioned non-electric skateboard with cruiser wheels, features lots of fancy circuitry, including color-changing LED's, a spedometer, and a 2 digit 7-segment display readout on the front tail.
